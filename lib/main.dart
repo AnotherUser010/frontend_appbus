@@ -21,6 +21,31 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+
+  @override
+  void initState() {
+    super.initState();
+    _verificarSesion();
+  }
+
+  // 🔥 Verifica si ya hay sesión guardada
+  Future<void> _verificarSesion() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool? isLoggedIn = prefs.getBool('isLoggedIn');
+
+    if (isLoggedIn == true && mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => HomePage(
+            nombre: prefs.getString('nombre') ?? '',
+            saldo: prefs.getInt('saldo') ?? 0,
+          ),
+        ),
+      );
+    }
+  }
+
   TextEditingController correo = TextEditingController();
   TextEditingController password = TextEditingController();
 
@@ -32,7 +57,9 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
     try {
-      final url = Uri.parse('http://104.237.153.30:3000/login'); // https://servidor-appbus.onrender.com/
+      final url = Uri.parse(
+        'http://104.237.153.30:3000/login',
+      ); // https://servidor-appbus.onrender.com/
 
       print("Intentando conectar a: $url");
 
@@ -48,7 +75,14 @@ class _LoginPageState extends State<LoginPage> {
       final data = jsonDecode(response.body);
 
       if (data['success']) {
-        Navigator.push(
+
+        // 🔥 Guardar sesión
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('nombre', data['nombre']);
+        await prefs.setInt('saldo', data['saldo']);
+        await prefs.setBool('isLoggedIn', true);
+
+        Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) =>
@@ -170,7 +204,9 @@ class RegisterPage extends StatelessWidget {
       return;
     }
     try {
-      final url = Uri.parse('http://104.237.153.30:3000/register'); //https://servidor-appbus.onrender.com/
+      final url = Uri.parse(
+        'http://104.237.153.30:3000/register',
+      ); //https://servidor-appbus.onrender.com/
 
       final response = await http.post(
         url,
@@ -270,6 +306,29 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[200],
+
+        appBar: AppBar(
+        title: Text('Mi Cuenta'),
+        backgroundColor: Color(0xFF0F2027),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.logout, color: Colors.white),
+            onPressed: () async {
+              SharedPreferences prefs = await SharedPreferences.getInstance();
+
+              await prefs.remove('isLoggedIn');
+              await prefs.remove('nombre');
+              await prefs.remove('saldo');
+
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => LoginPage()),
+              );
+            },
+          )
+        ],
+      ),
+
       body: SafeArea(
         child: SingleChildScrollView(
           // 👈 CLAVE
@@ -368,7 +427,7 @@ class HomePage extends StatelessWidget {
               ),
 
               SizedBox(height: 20),
-              
+
               GestureDetector(
                 onTap: () {
                   Navigator.push(
